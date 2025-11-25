@@ -1,0 +1,242 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC File Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- Navbar / Top Bar -->
+    <nav class="top-bar">
+        <div class="logo">
+            <i class="fa-solid fa-cloud-arrow-up"></i> PC File Viewer
+        </div>
+        <div class="credit">By BESTStudio</div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Upload Section (Pill Shape) -->
+        <section class="upload-section-pill">
+            <div class="upload-pill" id="drop-area">
+                <div class="upload-text">
+                    <h3>Upload Files</h3>
+                    <p>Drag & drop or select files.</p>
+                </div>
+                <form id="upload-form">
+                    <input type="file" id="fileElem" multiple accept="*/*" onchange="handleFiles(this.files)">
+                    <label class="upload-btn-round" for="fileElem">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                    </label>
+                </form>
+
+                <!-- Progress Overlay -->
+                <div id="progress-bar-container" class="hidden">
+                    <div id="progress-bar"></div>
+                    <span id="progress-text">0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs-container">
+            <h2 class="section-title">Your Files</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="images">Images</button>
+                <button class="tab-btn" data-tab="audio">Audio</button>
+                <button class="tab-btn" data-tab="video">Video</button>
+                <button class="tab-btn" data-tab="other">Other</button>
+            </div>
+        </div>
+
+        <!-- Tab Content: Images -->
+        <section id="images" class="tab-content active">
+            {% if files['image'] %}
+            <div class="grid-gallery">
+                {% for file in files['image'] %}
+                <div class="media-card image-card"
+                    onclick="openLightbox('{{ url_for('uploaded_file', filename=file) }}', {{ loop.index0 }})">
+                    <img src="{{ url_for('uploaded_file', filename=file) }}" alt="{{ file }}" loading="lazy">
+                    <div class="card-overlay">
+                        <i class="fa-solid fa-expand"></i>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No images found.</div>
+            {% endif %}
+        </section>
+
+        <!-- Tab Content: Audio -->
+        <section id="audio" class="tab-content">
+            {% if files['audio'] %}
+            <div class="list-view">
+                {% for file in files['audio'] %}
+                <div class="media-card list-card">
+                    <div class="list-card-content"
+                        onclick="openAudioPlayer('{{ url_for('uploaded_file', filename=file) }}', '{{ file }}')">
+                        <div class="file-icon"><i class="fa-solid fa-music"></i></div>
+                        <div class="file-details">
+                            <span class="filename">{{ file }}</span>
+                            <small>Tap to play</small>
+                        </div>
+                    </div>
+                    <div class="list-actions">
+                        <a href="{{ url_for('uploaded_file', filename=file) }}" class="action-btn" download>
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                        <button class="play-btn-small"
+                            onclick="openAudioPlayer('{{ url_for('uploaded_file', filename=file) }}', '{{ file }}')">
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No audio files found.</div>
+            {% endif %}
+        </section>
+
+        <!-- Tab Content: Video -->
+        <section id="video" class="tab-content">
+            {% if files['video'] %}
+            <div class="grid-gallery video-grid">
+                {% for file in files['video'] %}
+                <div class="media-card video-card"
+                    onclick="openVideoPlayer('{{ url_for('uploaded_file', filename=file) }}', '{{ file }}')">
+                    <div class="video-thumbnail-placeholder">
+                        <i class="fa-solid fa-play-circle"></i>
+                    </div>
+                    <div class="file-info">
+                        <span class="filename">{{ file }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No videos found.</div>
+            {% endif %}
+        </section>
+
+        <!-- Tab Content: Other -->
+        <section id="other" class="tab-content">
+            {% if files['other'] %}
+            <div class="list-view">
+                {% for file in files['other'] %}
+                <div class="media-card list-card">
+                    <div class="file-icon"><i class="fa-solid fa-file"></i></div>
+                    <div class="file-details">
+                        <span class="filename">{{ file }}</span>
+                    </div>
+                    <a href="{{ url_for('uploaded_file', filename=file) }}" class="action-btn" download>
+                        <i class="fa-solid fa-download"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No other files found.</div>
+            {% endif %}
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+
+    <!-- Image Lightbox -->
+    <div id="lightbox-modal" class="modal">
+        <span class="close-modal" onclick="closeModal('lightbox-modal')">&times;</span>
+        <div class="modal-content lightbox-content">
+            <button class="nav-btn prev-btn" onclick="changeSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="lightbox-image-wrapper">
+                <img id="lightbox-img" src="" alt="Full View">
+                <a id="lightbox-download-btn" href="#" class="lightbox-download" download>
+                    <i class="fa-solid fa-download"></i> Download
+                </a>
+            </div>
+            <button class="nav-btn next-btn" onclick="changeSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="video-modal" class="modal">
+        <span class="close-modal" onclick="closeModal('video-modal')">&times;</span>
+        <div class="modal-content video-player-content" id="video-player-container">
+            <h3 id="video-title">Video Title</h3>
+            <div class="video-wrapper" id="video-wrapper">
+                <video id="main-video" src=""></video>
+                <div class="video-controls-overlay" id="video-controls">
+                    <!-- Top Controls -->
+                    <div class="video-top-controls">
+                        <div class="brightness-control">
+                            <i class="fa-solid fa-sun"></i>
+                            <input type="range" id="brightness-slider" min="0.5" max="1.5" step="0.1" value="1">
+                        </div>
+                        <div class="video-actions">
+                            <a id="video-download-btn" href="#" class="icon-btn" download title="Download">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="playback-controls">
+                        <button onclick="seekVideo(-10)"><i class="fa-solid fa-rotate-left"></i> 10s</button>
+                        <button id="video-play-btn" onclick="toggleVideoPlay()"><i
+                                class="fa-solid fa-play"></i></button>
+                        <button onclick="seekVideo(10)">10s <i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <input type="range" id="video-progress" value="0" min="0" max="100">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Player Modal -->
+    <div id="audio-modal" class="modal">
+        <span class="close-modal" onclick="closeModal('audio-modal')">&times;</span>
+        <div class="modal-content audio-player-content">
+            <h3 id="audio-title">Audio Title</h3>
+
+            <!-- Visualizer Canvas -->
+            <canvas id="audio-visualizer"></canvas>
+
+            <audio id="main-audio" src="" crossorigin="anonymous"></audio>
+
+            <div class="audio-controls">
+                <button onclick="seekAudio(-10)"><i class="fa-solid fa-rotate-left"></i> 10s</button>
+                <button id="audio-play-btn" class="main-play-btn" onclick="toggleAudioPlay()"><i
+                        class="fa-solid fa-play"></i></button>
+                <button onclick="seekAudio(10)">10s <i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+
+            <div class="audio-actions">
+                <a id="audio-download-btn" href="#" class="text-btn" download>
+                    <i class="fa-solid fa-download"></i> Download Audio
+                </a>
+            </div>
+
+            <input type="range" id="audio-progress" value="0" min="0" max="100">
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
